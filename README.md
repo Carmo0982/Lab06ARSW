@@ -184,3 +184,9 @@ VITE_USE_MOCK=true
 - **Dark mode** y diseño responsive.
 
 > Este proyecto es un punto de partida para que tus estudiantes evolucionen el cliente clásico de Blueprints a una SPA moderna con prácticas de la industria.
+
+# INFORME DE LABORATORIO
+
+**Integrantes**
+- *Jacobo Diaz Alvarado*
+- *Santiago Carmona Pineda*

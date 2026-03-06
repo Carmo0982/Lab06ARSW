@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-export default function BlueprintCanvas({ points = [], width = 520, height = 360 }) {
+export default function BlueprintCanvas({ id, points = [], width = 520, height = 360 }) {
   const ref = useRef(null)
 
   useEffect(() => {
@@ -46,6 +46,7 @@ export default function BlueprintCanvas({ points = [], width = 520, height = 360
   return (
     <canvas
       ref={ref}
+      id={id}
       width={width}
       height={height}
       style={{

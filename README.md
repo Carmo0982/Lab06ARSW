@@ -185,6 +185,7 @@ VITE_USE_MOCK=true
 
 > Este proyecto es un punto de partida para que tus estudiantes evolucionen el cliente clásico de Blueprints a una SPA moderna con prácticas de la industria.
 
+---
 # INFORME DE LABORATORIO
 
 **Integrantes**

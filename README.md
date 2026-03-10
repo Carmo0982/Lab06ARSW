@@ -190,3 +190,187 @@ VITE_USE_MOCK=true
 **Integrantes**
 - *Jacobo Diaz Alvarado*
 - *Santiago Carmona Pineda*
+
+---
+
+## Entendiendo el proyecto
+
+Se empezará haciendo una breve descripción de la estructura de carpetas dentro de `src`.
+
+### components
+
+Esta carpeta se encarga de crear componentes que son reutilizados en diferentes partes del frontend.
+
+- **BlueprintCanvas**: este componente funcional es el encargado de dibujar la cuadrícula, la línea de puntos y los puntos de un *blueprint*.
+
+- **BlueprintForm**: es un formulario para crear un *blueprint*.
+
+- **BlueprintList**: es un componente que muestra una lista de blueprints como tarjetas.
+
+### features/blueprints
+
+- **blueprintsSlice**: aquí se encuentra la lógica de cómo se deben guardar los datos para el frontend.
+
+### pages
+
+Aquí se encuentran las páginas de nuestro frontend que usan algunos de los componentes ya creados anteriormente. Por ahora tenemos `BlueprintDetailPage`, `BlueprintsPage`, `LoginPage` y `NotFound`.
+
+### services
+
+- *apiClient*: aquí se encuentran las implementaciones de *Axios* y *JWT* de nuestro proyecto.
+
+### store
+
+- *index*: es la configuración central de Redux.
+
+---
+## Parte I
+
+Se nos pide modificar el componente de *BlueprintCanvas*. Se modifica la dimensión y se le agrega un `id`.
+
+```javascript
+export default function BlueprintCanvas({ id, points = [], width = 520, height = 360 })...
+```
+
+## Parte II
+
+Se nos pide conectar el frontend en React con el backend en Spring Boot. Para esto nos apoyamos en el laboratorio #5, donde ya se había implementado una *API REST* protegida con autenticación *JWT*.
+
+### Creación de *blueprintsService*
+
+Este nuevo servicio permite realizar peticiones HTTP hacia los endpoints REST del backend, utilizando las URLs definidas previamente en el laboratorio #5. Cada función del servicio corresponde a un endpoint específico del *BlueprintsAPIController*.
+
+```js
+import api from './apiClient'
+
+// GET todos los planos
+export const getBlueprints = async () => {
+    const res = await api.get('/v1/blueprints')
+    return res.data
+}
+
+// GET planos por autor
+export const getBlueprintsByAuthor = async (author) => {
+    const res = await api.get(`/v1/blueprints/${author}`)
+    return res.data.data
+}
+
+// GET plano por autor y nombre
+export const getBlueprint = async (author, name) => {
+    const res = await api.get(`/v1/blueprints/${author}/${name}`)
+    return res.data.data
+}
+
+// POST crear nuevo blueprint
+export const createBlueprint = async (blueprint) => {
+    const res = await api.post('/v1/blueprints', blueprint)
+    return res.data.data
+}
+
+// PUT agregar un punto
+export const addPoint = async (author, name, point) => {
+    const res = await api.put(`/v1/blueprints/${author}/${name}/points`, point)
+    return res.data.data
+}
+```
+
+Un detalle a aclarar es el uso de `data.data`. Se debe a que nuestra *API REST* retorna un *ApiResponse*.
+
+En nuestra *API REST* habíamos definido las URLs de esta forma `/v1/blueprint/...` así que tuvimos que modificar las URLs que había en `blueprintsSlice`.
+
+```js
+export const fetchAuthors = createAsyncThunk('blueprints/fetchAuthors', async () => {
+  // Modificación de URLs
+  const { data } = await api.get('/v1/blueprints')
+  const authors = [...new Set(data.data.map((bp) => bp.author))]
+  return authors
+})
+
+export const fetchByAuthor = createAsyncThunk('blueprints/fetchByAuthor', async (author) => {
+  // Modificación de URLs
+  const { data } = await api.get(`/v1/blueprints/${encodeURIComponent(author)}`)
+  // Adaptación a ApiResponse
+  return { author, items: data.data }
+})
+
+export const fetchBlueprint = createAsyncThunk(
+  'blueprints/fetchBlueprint',
+  async ({ author, name }) => {
+    // Modificación de URLs
+    const { data } = await api.get(
+      `/v1/blueprints/${encodeURIComponent(author)}/${encodeURIComponent(name)}`,
+    )
+    // Adaptación a ApiResponse
+    return data.data
+  },
+)
+
+export const createBlueprint = createAsyncThunk('blueprints/createBlueprint', async (payload) => {
+  // Modificación de URLs
+  const { data } = await api.post('/v1/blueprints', payload)
+  return data
+})
+```
+
+### Correcciones en *LoginPage*
+
+También fue necesario corregir dos errores en `LoginPage.jsx`. El primero fue la URL del login, que apuntaba a `/api/auth/login` cuando el endpoint real del backend es `/auth/login`. El segundo fue que el token se guardaba como `data.token`, pero el backend retorna `data.access_token`.
+
+```js
+// Antes
+const { data } = await api.post('/auth/login', { username, password })
+localStorage.setItem('token', data.token)
+
+// ✅Después
+const { data } = await axios.post('http://localhost:8080/auth/login', { username, password })
+localStorage.setItem('token', data.access_token)
+```
+
+Sin embargo, estos cambios no fueron suficientes. Fue necesario modificar `SecurityConfig` en el backend para habilitar `CORS` (Cross-Origin Resource Sharing), ya que el navegador bloqueaba las peticiones del frontend (`localhost:5173`) hacia el backend (`localhost:8080`) al tratarse de orígenes distintos.
+
+```java
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/health", "/auth/login").permitAll()
+                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/api/**").hasAnyAuthority("SCOPE_blueprints.read", "SCOPE_blueprints.write")
+                        .anyRequest().authenticated()
+                )
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+        return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+}
+```
+
+---
+## Parte III
+
+En esta parte se probó que funcionara el frontend en nuestra máquina.
+
+**Captura de login autorizado**
+![alt text](<img/Captura de pantalla 2026-03-10 002856.png>)
+
+**Captura de búsqueda por autor**
+![alt text](<img/Captura de pantalla 2026-03-10 003020.png>)
+
+**Captura de gráfica de puntos**
+![alt text](<img/Captura de pantalla 2026-03-10 003032.png>)

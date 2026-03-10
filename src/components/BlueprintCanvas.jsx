@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
-
+/*
+Se agregó id al blueprint canva
+*/
 export default function BlueprintCanvas({ id, points = [], width = 520, height = 360 }) {
   const ref = useRef(null)
 
@@ -42,7 +44,7 @@ export default function BlueprintCanvas({ id, points = [], width = 520, height =
       ctx.fill()
     }
   }, [points])
-
+//Referencia del id para el canva
   return (
     <canvas
       ref={ref}

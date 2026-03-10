@@ -375,3 +375,113 @@ En esta parte se probó que funcionara el frontend en nuestra máquina.
 
 **Captura de gráfica de puntos**
 ![alt text](<img/Captura de pantalla 2026-03-10 003032.png>)
+
+---
+## Parte IV
+
+En esta parte se nos pide "quemar" el frontend con mocks. Dentro de la carpeta `services` creamos una carpeta llamada `mocks`. A continuación se explicará los nuevos archivos creados en esta carpeta.
+
+- `apiclient.js`: este service perimíte llamar a la *API REST* a través de verbos *http* junto a su recpectiva *URL*.
+
+```js
+import api from '../apiClient.js'
+
+export const getAll = async () => {
+    const { data } = await api.get('/v1/blueprints')
+    return data.data
+}
+
+export const getByAuthor = async (author) => {
+    const { data } = await api.get(`/v1/blueprints/${encodeURIComponent(author)}`)
+    return data.data
+}
+
+export const getByAuthorAndName = async (author, name) => {
+    const { data } = await api.get(`/v1/blueprints/${encodeURIComponent(author)}/${encodeURIComponent(name)}`)
+    return data.data
+}
+
+export const create = async (blueprint) => {
+    const { data } = await api.post('/v1/blueprints', blueprint)
+    return data.data
+}
+```
+
+- `apimocks`: aquí se quemaron los datos de un *author* y se implementaron los métodos *getAll*, *getByAuthor*, *getByAuthorAndName* y *create*. 
+
+```js
+const mockData = [
+    { author: 'hemingway', name: 'El viejo y el mar', points: [{x: 10, y: 10}, {x: 100, y: 150}, {x: 200, y: 80}] }, 
+    { author: 'hemingway', name: 'Adiós a las armas', points: [{x:50, y: 50}, {x: 300, y: 200}] },
+    { author: 'kafka', name: 'La metamorfosis', points: [{x: 20, y: 30}, {x: 150, y: 100}, {x:400, y: 250}] },
+]
+
+export const getAll = async () => mockData
+
+export const getByAuthor = async (author) => {
+    const result = mockData.filter(item => item.author === author)
+    if (!result.length) {
+        throw new Error(`No se encontraron obras para el autor ${author}`)
+    }
+    return result
+}
+
+export const getByAuthorAndName = async (author, name) => {
+    const result = mockData.find(item => item.author === author && item.name === name)
+    if (!result) {
+        throw new Error(`No se encontró la obra ${name} del autor ${author}`)
+    } 
+    return result
+}  
+
+export const create = async (blueprint) => {
+    mockData.push(blueprint)
+    return blueprint
+}
+
+```
+
+- `blueprintService`: este servicio se encarga de de decidir si usar el `mock` o utilizar la *API REST* deependiendo del valor de verdad del `.env`.
+
+```js
+import * as mock from './apimock.js'
+import * as client from './apiclient.js'
+
+const service = import.meta.env.VITE_USE_MOCK === 'true' ? mock : client
+
+export const getAll = service.getAll
+export const getByAuthor = service.getByAuthor
+export const getByAuthorAndName = service.getByAuthorAndName
+export const create = service.create
+```
+- `.env`: aquí es donde decidimos qué valor de verdad ponerle al uso de mocks
+
+```
+VITE_USE_MOCK=false
+```
+
+Después de la creación de estos archivos se modificó `blueprintsSlice.js`, reemplazando las llamadas directas a api por las funciones del nuevo `blueprintsService.js`. De esta forma, el slice ya no depende directamente del backend, sino del servicio activo según la variable `VITE_USE_MOCK`.
+
+```js
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { getAll, getByAuthor, getByAuthorAndName, create } from '../../services/mocks/blueprintsService.js'
+
+export const fetchAuthors = createAsyncThunk('blueprints/fetchAuthors', async () => {
+  const blueprints = await getAll()
+  return [...new Set(blueprints.map(bp => bp.author))]
+})
+
+export const fetchByAuthor = createAsyncThunk('blueprints/fetchByAuthor', async (author) => {
+  const items = await getByAuthor(author)
+  return { author, items }
+})
+
+export const fetchBlueprint = createAsyncThunk('blueprints/fetchBlueprint', async ({ author, name }) => {
+  return await getByAuthorAndName(author, name)
+})
+
+export const createBlueprint = createAsyncThunk('blueprints/createBlueprint', async (payload) => {
+  return await create(payload)
+})
+```
+

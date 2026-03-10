@@ -322,7 +322,7 @@ También fue necesario corregir dos errores en `LoginPage.jsx`. El primero fue l
 const { data } = await api.post('/auth/login', { username, password })
 localStorage.setItem('token', data.token)
 
-// ✅Después
+// Después
 const { data } = await axios.post('http://localhost:8080/auth/login', { username, password })
 localStorage.setItem('token', data.access_token)
 ```

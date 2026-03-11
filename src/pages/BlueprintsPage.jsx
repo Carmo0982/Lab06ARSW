@@ -4,15 +4,19 @@ import {
   fetchAuthors,
   fetchByAuthor,
   fetchBlueprint,
+  selectTop5,
 } from '../features/blueprints/blueprintsSlice.js'
 import BlueprintCanvas from '../components/BlueprintCanvas.jsx'
 
+
 export default function BlueprintsPage() {
   const dispatch = useDispatch()
-  const { byAuthor, current, status } = useSelector((s) => s.blueprints)
+  const { byAuthor, current, fetchByAuthorStatus, fetchBlueprintStatus, error } = useSelector((s) => s.blueprints)
   const [authorInput, setAuthorInput] = useState('')
   const [selectedAuthor, setSelectedAuthor] = useState('')
   const items = byAuthor[selectedAuthor] || []
+
+  const top5 = useSelector((state) => selectTop5(state, selectedAuthor))
 
   useEffect(() => {
     dispatch(fetchAuthors())
@@ -55,29 +59,20 @@ export default function BlueprintsPage() {
           <h3 style={{ marginTop: 0 }}>
             {selectedAuthor ? `${selectedAuthor}'s blueprints:` : 'Results'}
           </h3>
-          {status === 'loading' && <p>Cargando...</p>}
-          {!items.length && status !== 'loading' && <p>Sin resultados.</p>}
+
+          {fetchByAuthorStatus === 'loading' && <p>Cargando blueprints...</p>}
+          {fetchByAuthorStatus === 'failed' && <p style={{ color: '#f87171' }}>Error: {error}</p>}
+
+          {!items.length && fetchByAuthorStatus !== 'loading' && <p>Sin resultados.</p>}
           {!!items.length && (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th
-                      style={{
-                        textAlign: 'left',
-                        padding: '8px',
-                        borderBottom: '1px solid #334155',
-                      }}
-                    >
+                    <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #334155' }}>
                       Blueprint name
                     </th>
-                    <th
-                      style={{
-                        textAlign: 'right',
-                        padding: '8px',
-                        borderBottom: '1px solid #334155',
-                      }}
-                    >
+                    <th style={{ textAlign: 'right', padding: '8px', borderBottom: '1px solid #334155' }}>
                       Number of points
                     </th>
                     <th style={{ padding: '8px', borderBottom: '1px solid #334155' }}></th>
@@ -89,13 +84,7 @@ export default function BlueprintsPage() {
                       <td style={{ padding: '8px', borderBottom: '1px solid #1f2937' }}>
                         {bp.name}
                       </td>
-                      <td
-                        style={{
-                          padding: '8px',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #1f2937',
-                        }}
-                      >
+                      <td style={{ padding: '8px', textAlign: 'right', borderBottom: '1px solid #1f2937' }}>
                         {bp.points?.length || 0}
                       </td>
                       <td style={{ padding: '8px', borderBottom: '1px solid #1f2937' }}>
@@ -110,11 +99,24 @@ export default function BlueprintsPage() {
             </div>
           )}
           <p style={{ marginTop: 12, fontWeight: 700 }}>Total user points: {totalPoints}</p>
+
+          {top5.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <h4 style={{ marginBottom: 8 }}>Top 5 blueprints por puntos:</h4>
+              {top5.map((bp, i) => (
+                <p key={bp.name} style={{ margin: '4px 0' }}>
+                  {i + 1}. {bp.name} — {bp.points?.length || 0} puntos
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
       <section className="card">
         <h3 style={{ marginTop: 0 }}>Current blueprint: {current?.name || '—'}</h3>
+        {fetchBlueprintStatus === 'loading' && <p>Cargando plano...</p>}
+        {fetchBlueprintStatus === 'failed' && <p style={{ color: '#f87171' }}>Error al cargar el plano</p>}
         <BlueprintCanvas points={current?.points || []} />
       </section>
     </div>

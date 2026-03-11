@@ -561,7 +561,7 @@ const top5 = useSelector((state) => selectTop5(state, selectedAuthor))
 )}
 ```
 --
-## Actividad 2: Rutas protegidas
+### Actividad 2: Rutas protegidas
 
 Se creó el componente `PrivateRoute.jsx` en `src/components/`. Este componente verifica si existe un token JWT en el `localStorage`. Si existe, muestra el contenido protegido; si no, redirige automáticamente al login.
 ```jsx

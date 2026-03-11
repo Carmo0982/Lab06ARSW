@@ -560,3 +560,38 @@ const top5 = useSelector((state) => selectTop5(state, selectedAuthor))
     </div>
 )}
 ```
+--
+## Actividad 2: Rutas protegidas
+
+Se creó el componente `PrivateRoute.jsx` en `src/components/`. Este componente verifica si existe un token JWT en el `localStorage`. Si existe, muestra el contenido protegido; si no, redirige automáticamente al login.
+```jsx
+import { Navigate } from 'react-router-dom'
+
+export default function PrivateRoute({ children }) {
+  const token = localStorage.getItem('token')
+  return token ? children : <Navigate to="/login" replace />
+}
+```
+
+Posteriormente se modificó `App.jsx` para proteger las rutas que requieren autenticación, envolviendo los componentes con `<PrivateRoute>`.
+```jsx
+import PrivateRoute from './components/PrivateRoute.jsx'
+
+<Routes>
+  <Route path="/" element={
+    <PrivateRoute>
+      <BlueprintsPage />
+    </PrivateRoute>
+  } />
+  <Route path="/blueprints/:author/:name" element={
+    <PrivateRoute>
+      <BlueprintDetailPage />
+    </PrivateRoute>
+  } />
+  <Route path="/login" element={<LoginPage />} />
+  <Route path="*" element={<NotFound />} />
+</Routes>
+```
+
+De esta forma, si un usuario intenta acceder a `/` o `/blueprints/:author/:name` sin estar autenticado, es redirigido automáticamente a `/login`.
+

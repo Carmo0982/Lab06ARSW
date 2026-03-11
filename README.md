@@ -595,3 +595,77 @@ import PrivateRoute from './components/PrivateRoute.jsx'
 
 De esta forma, si un usuario intenta acceder a `/` o `/blueprints/:author/:name` sin estar autenticado, es redirigido automáticamente a `/login`.
 
+--- 
+## Actividad 3: CRUD completo
+
+#### Backend
+
+Se agregaron dos nuevos endpoints en `BlueprintsAPIController.java`:
+
+**DELETE** — elimina un blueprint por autor y nombre:
+```java
+@DeleteMapping("/{author}/{bpname}")
+public ResponseEntity<ApiResponse<Void>> delete(
+        @PathVariable String author,
+        @PathVariable String bpname) {
+    try {
+        services.deleteBlueprint(author, bpname);
+        return ResponseEntity.ok(new ApiResponse<>(200, "DELETE", null));
+    } catch (BlueprintNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiResponse<>(404, "Not found", null));
+    }
+}
+```
+
+**PUT** — reemplaza completamente la lista de puntos de un blueprint:
+```java
+@PutMapping("/{author}/{bpname}")
+public ResponseEntity<ApiResponse<Blueprint>> update(
+        @PathVariable String author,
+        @PathVariable String bpname,
+        @RequestBody List<Point> newPoints) {
+    try {
+        Blueprint bp = services.updateBlueprint(author, bpname, newPoints);
+        return ResponseEntity.ok(new ApiResponse<>(200, "UPDATED", bp));
+    } catch (BlueprintNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiResponse<>(404, "Not Found", null));
+    }
+}
+```
+
+#### Frontend
+
+Se agregaron `deleteBlueprint` y `updateBlueprint` en `mocks/apiClient.js` y `mocks/apimock.js`, y se exportaron en `mocks/blueprintsService.js`.
+
+En `blueprintsSlice.js` se implementaron dos nuevos thunks con **optimistic updates**: la UI se actualiza inmediatamente antes de que el backend confirme, y si la operación falla, se revierte al estado anterior.
+```javascript
+export const deleteBlueprintThunk = createAsyncThunk(
+  'blueprints/deleteBlueprint',
+  async ({ author, name }, { getState, rejectWithValue }) => {
+    const prevItems = getState().blueprints.byAuthor[author] || []
+    try {
+      await deleteBlueprint(author, name)
+      return { author, name }
+    } catch (e) {
+      return rejectWithValue({ author, prevItems })
+    }
+  }
+)
+
+export const updateBlueprintThunk = createAsyncThunk(
+  'blueprints/updateBlueprint',
+  async ({ author, name, points }, { getState, rejectWithValue }) => {
+    const prevBlueprint = getState().blueprints.byAuthor[author]?.find(bp => bp.name === name)
+    try {
+      const updated = await updateBlueprint(author, name, points)
+      return { author, name, updated }
+    } catch (e) {
+      return rejectWithValue({ author, name, prevBlueprint })
+    }
+  }
+)
+```
+
+En `BlueprintsPage.jsx` se agregaron los botones **Edit** y **Delete** en cada fila de la tabla. Al hacer clic en **Edit** aparece un textarea debajo del canvas para modificar los puntos en formato JSON. Al hacer clic en **Delete** se pide confirmación antes de eliminar.

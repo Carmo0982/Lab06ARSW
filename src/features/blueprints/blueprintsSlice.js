@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { createSelector } from 'reselect'
-import { getAll, getByAuthor, getByAuthorAndName, create } from '../../services/mocks/blueprintsService.js'
+import { getAll, getByAuthor, getByAuthorAndName, create, deleteBlueprint, updateBlueprint } from '../../services/mocks/blueprintsService.js'
 
 export const fetchAuthors = createAsyncThunk('blueprints/fetchAuthors', async () => {
   const blueprints = await getAll()
@@ -19,6 +19,34 @@ export const fetchBlueprint = createAsyncThunk('blueprints/fetchBlueprint', asyn
 export const createBlueprint = createAsyncThunk('blueprints/createBlueprint', async (payload) => {
   return await create(payload)
 })
+
+export const deleteBlueprintThunk = createAsyncThunk(
+  'blueprints/deleteBlueprint',
+  async ({ author, name }, { getState, rejectWithValue }) => {
+    const state = getState()
+    const prevItems = state.blueprints.byAuthor[author] || []
+    try {
+      await deleteBlueprint(author, name)
+      return { author, name }
+    } catch (e) {
+      return rejectWithValue({ author, prevItems })
+    }
+  }
+)
+
+export const updateBlueprintThunk = createAsyncThunk(
+  'blueprints/updateBlueprint',
+  async ({ author, name, points }, { getState, rejectWithValue }) => {
+    const state = getState()
+    const prevBlueprint = state.blueprints.byAuthor[author]?.find(bp => bp.name === name)
+    try {
+      const updated = await updateBlueprint(author, name, points)
+      return { author, name, updated }
+    } catch (e) {
+      return rejectWithValue({ author, name, prevBlueprint })
+    }
+  }
+)
 
 const slice = createSlice({
   name: 'blueprints',
@@ -63,6 +91,34 @@ const slice = createSlice({
       .addCase(fetchBlueprint.rejected, (s, a) => {
         s.fetchBlueprintStatus = 'failed'
         s.error = a.error.message
+      })
+      // Optimistic update para delete
+      .addCase(deleteBlueprintThunk.pending, (s, a) => {
+          const { author, name } = a.meta.arg
+          s.byAuthor[author] = (s.byAuthor[author] || []).filter(bp => bp.name !== name)
+      })
+      .addCase(deleteBlueprintThunk.rejected, (s, a) => {
+          const { author, prevItems } = a.payload
+          s.byAuthor[author] = prevItems  // revertir
+          s.error = 'Error al eliminar el blueprint'
+      })
+
+      // Optimistic update para update
+      .addCase(updateBlueprintThunk.pending, (s, a) => {
+          const { author, name, points } = a.meta.arg
+          const bp = (s.byAuthor[author] || []).find(bp => bp.name === name)
+          if (bp) bp.points = points
+      })
+      .addCase(updateBlueprintThunk.fulfilled, (s, a) => {
+          const { author, name, updated } = a.payload
+          const idx = (s.byAuthor[author] || []).findIndex(bp => bp.name === name)
+          if (idx !== -1) s.byAuthor[author][idx] = updated
+      })
+      .addCase(updateBlueprintThunk.rejected, (s, a) => {
+          const { author, name, prevBlueprint } = a.payload
+          const idx = (s.byAuthor[author] || []).findIndex(bp => bp.name === name)
+          if (idx !== -1) s.byAuthor[author][idx] = prevBlueprint  // revertir
+          s.error = 'Error al actualizar el blueprint'
       })
   },
 })

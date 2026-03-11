@@ -7,4 +7,5 @@ export const getAll = service.getAll
 export const getByAuthor = service.getByAuthor
 export const getByAuthorAndName = service.getByAuthorAndName
 export const create = service.create
-
+export const updateBlueprint = service.updateBlueprint
+export const deleteBlueprint = service.deleteBlueprint  

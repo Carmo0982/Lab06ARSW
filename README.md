@@ -485,3 +485,78 @@ export const createBlueprint = createAsyncThunk('blueprints/createBlueprint', as
 })
 ```
 
+--- 
+## Recomendaciones y actividades sugeridas
+
+### Actividad 1: Redux avanzado
+
+- **Estados loading/error por thunk**
+
+Se agregaron estados de carga y error individuales por cada thunk en `blueprintsSlice.js`, reemplazando el estado global `status` por uno específico para cada operación.
+```javascript
+initialState: {
+    authors: [],
+    byAuthor: {},
+    current: null,
+    fetchAuthorsStatus: 'idle',
+    fetchByAuthorStatus: 'idle',
+    fetchBlueprintStatus: 'idle',
+    createBlueprintStatus: 'idle',
+    error: null,
+},
+```
+
+Cada thunk ahora maneja sus propios estados `pending`, `fulfilled` y `rejected`:
+```javascript
+.addCase(fetchByAuthor.pending, (s) => { s.fetchByAuthorStatus = 'loading' })
+.addCase(fetchByAuthor.fulfilled, (s, a) => {
+    s.fetchByAuthorStatus = 'succeeded'
+    s.byAuthor[a.payload.author] = a.payload.items
+})
+.addCase(fetchByAuthor.rejected, (s, a) => {
+    s.fetchByAuthorStatus = 'failed'
+    s.error = a.error.message
+})
+```
+
+Estos estados se muestran en la UI de `BlueprintsPage.jsx`:
+```jsx
+{fetchByAuthorStatus === 'loading' && <p>Cargando blueprints...</p>}
+{fetchByAuthorStatus === 'failed' && <p style={{ color: '#f87171' }}>Error: {error}</p>}
+```
+
+- **Memo selectors para top-5**
+
+Se instaló `reselect` y se implementó un memo selector que deriva el top 5 de blueprints por cantidad de puntos de un autor, sin recalcular si los datos no cambiaron.
+```javascript
+import { createSelector } from 'reselect'
+
+const selectByAuthor = (state) => state.blueprints.byAuthor
+const selectSelectedAuthor = (_, author) => author
+
+export const selectTop5 = createSelector(
+  [selectByAuthor, selectSelectedAuthor],
+  (byAuthor, author) => {
+    const items = byAuthor[author] || []
+    return [...items]
+      .sort((a, b) => (b.points?.length || 0) - (a.points?.length || 0))
+      .slice(0, 5)
+  }
+)
+```
+
+En `BlueprintsPage.jsx` se usa el selector y se muestra el resultado debajo de la tabla:
+```jsx
+const top5 = useSelector((state) => selectTop5(state, selectedAuthor))
+
+{top5.length > 0 && (
+    <div style={{ marginTop: 16 }}>
+        <h4 style={{ marginBottom: 8 }}>Top 5 blueprints por puntos:</h4>
+        {top5.map((bp, i) => (
+            <p key={bp.name} style={{ margin: '4px 0' }}>
+                {i + 1}. {bp.name} — {bp.points?.length || 0} puntos
+            </p>
+        ))}
+    </div>
+)}
+```

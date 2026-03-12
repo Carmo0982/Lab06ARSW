@@ -9,6 +9,7 @@ import {
   updateBlueprintThunk,
 } from '../features/blueprints/blueprintsSlice.js'
 import BlueprintCanvas from '../components/BlueprintCanvas.jsx'
+import InteractiveCanvas from '../components/InteractiveCanvas.jsx'
 
 export default function BlueprintsPage() {
   const dispatch = useDispatch()
@@ -151,16 +152,18 @@ export default function BlueprintsPage() {
         {editingBp && (
           <div style={{ marginTop: 16 }}>
             <h4 style={{ marginBottom: 8 }}>Editando: {editingBp.name}</h4>
-            <textarea
-              className="input"
-              rows="4"
-              value={editPointsJSON}
-              onChange={(e) => setEditPointsJSON(e.target.value)}
+            <p style={{ fontSize: 12, color: '#94a3b8' }}>Haz clic en el canvas para agregar puntos</p>
+            <InteractiveCanvas
+              initialPoints={editingBp.points || []}
+              onSave={(points) => {
+                dispatch(updateBlueprintThunk({ author: editingBp.author, name: editingBp.name, points }))
+                dispatch(fetchBlueprint({ author: editingBp.author, name: editingBp.name }))
+                setEditingBp(null)
+              }}
             />
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button className="btn primary" onClick={handleEditSave}>Guardar</button>
-              <button className="btn" onClick={() => setEditingBp(null)}>Cancelar</button>
-            </div>
+            <button className="btn" style={{ marginTop: 8 }} onClick={() => setEditingBp(null)}>
+              Cancelar
+            </button>
           </div>
         )}
       </section>

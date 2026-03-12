@@ -596,9 +596,9 @@ import PrivateRoute from './components/PrivateRoute.jsx'
 De esta forma, si un usuario intenta acceder a `/` o `/blueprints/:author/:name` sin estar autenticado, es redirigido automáticamente a `/login`.
 
 --- 
-## Actividad 3: CRUD completo
+### Actividad 3: CRUD completo
 
-#### Backend
+- **Backend**
 
 Se agregaron dos nuevos endpoints en `BlueprintsAPIController.java`:
 
@@ -635,7 +635,7 @@ public ResponseEntity<ApiResponse<Blueprint>> update(
 }
 ```
 
-#### Frontend
+- **Frontend**
 
 Se agregaron `deleteBlueprint` y `updateBlueprint` en `mocks/apiClient.js` y `mocks/apimock.js`, y se exportaron en `mocks/blueprintsService.js`.
 
@@ -669,3 +669,24 @@ export const updateBlueprintThunk = createAsyncThunk(
 ```
 
 En `BlueprintsPage.jsx` se agregaron los botones **Edit** y **Delete** en cada fila de la tabla. Al hacer clic en **Edit** aparece un textarea debajo del canvas para modificar los puntos en formato JSON. Al hacer clic en **Delete** se pide confirmación antes de eliminar.
+
+### Actividad 4: Dibujo interactivo
+
+Se creó el componente `InteractiveCanvas.jsx` en `src/components/`. Este componente extiende el comportamiento de `BlueprintCanvas` permitiendo al usuario hacer clic sobre el canvas para agregar puntos interactivamente.
+```jsx
+const handleClick = (e) => {
+    const canvas = ref.current
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const x = Math.round((e.clientX - rect.left) * scaleX)
+    const y = Math.round((e.clientY - rect.top) * scaleY)
+    setPoints(prev => [...prev, { x, y }])
+}
+```
+
+El cálculo de `scaleX` y `scaleY` es necesario porque el canvas puede tener un tamaño visual diferente al tamaño interno de coordenadas (`520x360`), por lo que se ajustan las coordenadas del click al sistema de coordenadas real del canvas.
+
+El componente recibe `initialPoints` para mostrar los puntos existentes del blueprint al abrir el editor, y `onSave` como función que se llama al presionar **Guardar** con la lista de puntos actualizada. También incluye un botón **Limpiar** para borrar todos los puntos del canvas.
+
+En `BlueprintsPage.jsx` se reemplazó el textarea de edición JSON por el nuevo `InteractiveCanvas`, de forma que al hacer clic en **Edit** el usuario puede dibujar los puntos directamente sobre el canvas en lugar de escribirlos manualmente.

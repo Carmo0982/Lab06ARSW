@@ -19,6 +19,7 @@ export default function BlueprintsPage() {
   const [authorInput, setAuthorInput] = useState('')
   const [selectedAuthor, setSelectedAuthor] = useState('')
   const [editingBp, setEditingBp] = useState(null)
+  const [lastOpenedBp, setLastOpenedBp] = useState(null)
   const items = byAuthor[selectedAuthor] || []
   const top5 = useSelector((state) => selectTop5(state, selectedAuthor))
 
@@ -38,6 +39,7 @@ export default function BlueprintsPage() {
   }
 
   const openBlueprint = (bp) => {
+    setLastOpenedBp(bp)
     dispatch(fetchBlueprint({ author: bp.author, name: bp.name }))
   }
 
@@ -75,7 +77,14 @@ export default function BlueprintsPage() {
             {selectedAuthor ? `${selectedAuthor}'s blueprints` : 'Results'}
           </h3>
           {fetchByAuthorStatus === 'loading' && <p>Cargando blueprints...</p>}
-          {fetchByAuthorStatus === 'failed' && <p style={{ color: '#f87171' }}>Error: {error}</p>}
+          {fetchByAuthorStatus === 'failed' && (
+            <div className="error-banner" role="alert">
+              <span>Error: {error}</span>
+              <button className="btn-retry" onClick={() => dispatch(fetchByAuthor(selectedAuthor))}>
+                Reintentar
+              </button>
+            </div>
+          )}
 
           {!items.length && fetchByAuthorStatus !== 'loading' && <p>Sin resultados.</p>}
           {!!items.length && (
@@ -151,7 +160,19 @@ export default function BlueprintsPage() {
         </div>
         {fetchBlueprintStatus === 'loading' && <p>Cargando plano...</p>}
         {fetchBlueprintStatus === 'failed' && (
-          <p style={{ color: '#f87171' }}>Error al cargar el plano</p>
+          <div className="error-banner" role="alert">
+            <span>Error al cargar el plano</span>
+            {lastOpenedBp && (
+              <button
+                className="btn-retry"
+                onClick={() =>
+                  dispatch(fetchBlueprint({ author: lastOpenedBp.author, name: lastOpenedBp.name }))
+                }
+              >
+                Reintentar
+              </button>
+            )}
+          </div>
         )}
         <div style={{ marginTop: 12 }}>
           <BlueprintCanvas id="blueprintCanvas" points={current?.points || []} />

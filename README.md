@@ -572,7 +572,9 @@ Se refactorizó completamente el archivo de estilos:
 - **Campo de nombre actual (`.current-blueprint-input`)**: estilo distintivo con color accent (`#93c5fd`) para resaltar visualmente el plano seleccionado.
 - **Header y nav**: bordes inferiores, transiciones en links y estado `active` más claro.
 - **Tarjetas (`.card`)**: sombra más pronunciada y padding ajustado.
---- 
+
+---
+
 ## Recomendaciones y actividades sugeridas
 
 ### Actividad 1: Redux avanzado
@@ -580,6 +582,7 @@ Se refactorizó completamente el archivo de estilos:
 - **Estados loading/error por thunk**
 
 Se agregaron estados de carga y error individuales por cada thunk en `blueprintsSlice.js`, reemplazando el estado global `status` por uno específico para cada operación.
+
 ```javascript
 initialState: {
     authors: [],
@@ -594,6 +597,7 @@ initialState: {
 ```
 
 Cada thunk ahora maneja sus propios estados `pending`, `fulfilled` y `rejected`:
+
 ```javascript
 .addCase(fetchByAuthor.pending, (s) => { s.fetchByAuthorStatus = 'loading' })
 .addCase(fetchByAuthor.fulfilled, (s, a) => {
@@ -607,14 +611,20 @@ Cada thunk ahora maneja sus propios estados `pending`, `fulfilled` y `rejected`:
 ```
 
 Estos estados se muestran en la UI de `BlueprintsPage.jsx`:
+
 ```jsx
-{fetchByAuthorStatus === 'loading' && <p>Cargando blueprints...</p>}
-{fetchByAuthorStatus === 'failed' && <p style={{ color: '#f87171' }}>Error: {error}</p>}
+{
+  fetchByAuthorStatus === 'loading' && <p>Cargando blueprints...</p>
+}
+{
+  fetchByAuthorStatus === 'failed' && <p style={{ color: '#f87171' }}>Error: {error}</p>
+}
 ```
 
 - **Memo selectors para top-5**
 
 Se instaló `reselect` y se implementó un memo selector que deriva el top 5 de blueprints por cantidad de puntos de un autor, sin recalcular si los datos no cambiaron.
+
 ```javascript
 import { createSelector } from 'reselect'
 
@@ -625,32 +635,36 @@ export const selectTop5 = createSelector(
   [selectByAuthor, selectSelectedAuthor],
   (byAuthor, author) => {
     const items = byAuthor[author] || []
-    return [...items]
-      .sort((a, b) => (b.points?.length || 0) - (a.points?.length || 0))
-      .slice(0, 5)
-  }
+    return [...items].sort((a, b) => (b.points?.length || 0) - (a.points?.length || 0)).slice(0, 5)
+  },
 )
 ```
 
 En `BlueprintsPage.jsx` se usa el selector y se muestra el resultado debajo de la tabla:
+
 ```jsx
 const top5 = useSelector((state) => selectTop5(state, selectedAuthor))
 
-{top5.length > 0 && (
+{
+  top5.length > 0 && (
     <div style={{ marginTop: 16 }}>
-        <h4 style={{ marginBottom: 8 }}>Top 5 blueprints por puntos:</h4>
-        {top5.map((bp, i) => (
-            <p key={bp.name} style={{ margin: '4px 0' }}>
-                {i + 1}. {bp.name} — {bp.points?.length || 0} puntos
-            </p>
-        ))}
+      <h4 style={{ marginBottom: 8 }}>Top 5 blueprints por puntos:</h4>
+      {top5.map((bp, i) => (
+        <p key={bp.name} style={{ margin: '4px 0' }}>
+          {i + 1}. {bp.name} — {bp.points?.length || 0} puntos
+        </p>
+      ))}
     </div>
-)}
+  )
+}
 ```
+
 --
+
 ### Actividad 2: Rutas protegidas
 
 Se creó el componente `PrivateRoute.jsx` en `src/components/`. Este componente verifica si existe un token JWT en el `localStorage`. Si existe, muestra el contenido protegido; si no, redirige automáticamente al login.
+
 ```jsx
 import { Navigate } from 'react-router-dom'
 
@@ -661,20 +675,27 @@ export default function PrivateRoute({ children }) {
 ```
 
 Posteriormente se modificó `App.jsx` para proteger las rutas que requieren autenticación, envolviendo los componentes con `<PrivateRoute>`.
+
 ```jsx
 import PrivateRoute from './components/PrivateRoute.jsx'
 
-<Routes>
-  <Route path="/" element={
-    <PrivateRoute>
-      <BlueprintsPage />
-    </PrivateRoute>
-  } />
-  <Route path="/blueprints/:author/:name" element={
-    <PrivateRoute>
-      <BlueprintDetailPage />
-    </PrivateRoute>
-  } />
+;<Routes>
+  <Route
+    path="/"
+    element={
+      <PrivateRoute>
+        <BlueprintsPage />
+      </PrivateRoute>
+    }
+  />
+  <Route
+    path="/blueprints/:author/:name"
+    element={
+      <PrivateRoute>
+        <BlueprintDetailPage />
+      </PrivateRoute>
+    }
+  />
   <Route path="/login" element={<LoginPage />} />
   <Route path="*" element={<NotFound />} />
 </Routes>
@@ -682,7 +703,8 @@ import PrivateRoute from './components/PrivateRoute.jsx'
 
 De esta forma, si un usuario intenta acceder a `/` o `/blueprints/:author/:name` sin estar autenticado, es redirigido automáticamente a `/login`.
 
---- 
+---
+
 ### Actividad 3: CRUD completo
 
 - **Backend**
@@ -690,6 +712,7 @@ De esta forma, si un usuario intenta acceder a `/` o `/blueprints/:author/:name`
 Se agregaron dos nuevos endpoints en `BlueprintsAPIController.java`:
 
 **DELETE** — elimina un blueprint por autor y nombre:
+
 ```java
 @DeleteMapping("/{author}/{bpname}")
 public ResponseEntity<ApiResponse<Void>> delete(
@@ -706,6 +729,7 @@ public ResponseEntity<ApiResponse<Void>> delete(
 ```
 
 **PUT** — reemplaza completamente la lista de puntos de un blueprint:
+
 ```java
 @PutMapping("/{author}/{bpname}")
 public ResponseEntity<ApiResponse<Blueprint>> update(
@@ -727,6 +751,7 @@ public ResponseEntity<ApiResponse<Blueprint>> update(
 Se agregaron `deleteBlueprint` y `updateBlueprint` en `mocks/apiClient.js` y `mocks/apimock.js`, y se exportaron en `mocks/blueprintsService.js`.
 
 En `blueprintsSlice.js` se implementaron dos nuevos thunks con **optimistic updates**: la UI se actualiza inmediatamente antes de que el backend confirme, y si la operación falla, se revierte al estado anterior.
+
 ```javascript
 export const deleteBlueprintThunk = createAsyncThunk(
   'blueprints/deleteBlueprint',
@@ -738,20 +763,20 @@ export const deleteBlueprintThunk = createAsyncThunk(
     } catch (e) {
       return rejectWithValue({ author, prevItems })
     }
-  }
+  },
 )
 
 export const updateBlueprintThunk = createAsyncThunk(
   'blueprints/updateBlueprint',
   async ({ author, name, points }, { getState, rejectWithValue }) => {
-    const prevBlueprint = getState().blueprints.byAuthor[author]?.find(bp => bp.name === name)
+    const prevBlueprint = getState().blueprints.byAuthor[author]?.find((bp) => bp.name === name)
     try {
       const updated = await updateBlueprint(author, name, points)
       return { author, name, updated }
     } catch (e) {
       return rejectWithValue({ author, name, prevBlueprint })
     }
-  }
+  },
 )
 ```
 
@@ -760,15 +785,16 @@ En `BlueprintsPage.jsx` se agregaron los botones **Edit** y **Delete** en cada f
 ### Actividad 4: Dibujo interactivo
 
 Se creó el componente `InteractiveCanvas.jsx` en `src/components/`. Este componente extiende el comportamiento de `BlueprintCanvas` permitiendo al usuario hacer clic sobre el canvas para agregar puntos interactivamente.
+
 ```jsx
 const handleClick = (e) => {
-    const canvas = ref.current
-    const rect = canvas.getBoundingClientRect()
-    const scaleX = canvas.width / rect.width
-    const scaleY = canvas.height / rect.height
-    const x = Math.round((e.clientX - rect.left) * scaleX)
-    const y = Math.round((e.clientY - rect.top) * scaleY)
-    setPoints(prev => [...prev, { x, y }])
+  const canvas = ref.current
+  const rect = canvas.getBoundingClientRect()
+  const scaleX = canvas.width / rect.width
+  const scaleY = canvas.height / rect.height
+  const x = Math.round((e.clientX - rect.left) * scaleX)
+  const y = Math.round((e.clientY - rect.top) * scaleY)
+  setPoints((prev) => [...prev, { x, y }])
 }
 ```
 
@@ -777,3 +803,151 @@ El cálculo de `scaleX` y `scaleY` es necesario porque el canvas puede tener un 
 El componente recibe `initialPoints` para mostrar los puntos existentes del blueprint al abrir el editor, y `onSave` como función que se llama al presionar **Guardar** con la lista de puntos actualizada. También incluye un botón **Limpiar** para borrar todos los puntos del canvas.
 
 En `BlueprintsPage.jsx` se reemplazó el textarea de edición JSON por el nuevo `InteractiveCanvas`, de forma que al hacer clic en **Edit** el usuario puede dibujar los puntos directamente sobre el canvas en lugar de escribirlos manualmente.
+
+---
+
+### Actividad 5: Errores y Retry
+
+Se agregaron banners de error con botón **Reintentar** en `BlueprintsPage.jsx` para los dos `GET` principales.
+
+Cuando `fetchByAuthorStatus === 'failed'` (búsqueda por autor), se muestra un banner estilizado con el mensaje de error y un botón que vuelve a despachar el thunk `fetchByAuthor` con el mismo autor:
+
+```jsx
+{
+  fetchByAuthorStatus === 'failed' && (
+    <div className="error-banner" role="alert">
+      <span>Error: {error}</span>
+      <button className="btn-retry" onClick={() => dispatch(fetchByAuthor(selectedAuthor))}>
+        Reintentar
+      </button>
+    </div>
+  )
+}
+```
+
+Cuando `fetchBlueprintStatus === 'failed'` (carga de un plano individual), se muestra otro banner que reintenta con el último plano que se intentó abrir. Para esto se agregó el estado local `lastOpenedBp`, que se actualiza cada vez que el usuario hace clic en **Open**:
+
+```jsx
+const [lastOpenedBp, setLastOpenedBp] = useState(null)
+
+const openBlueprint = (bp) => {
+  setLastOpenedBp(bp)
+  dispatch(fetchBlueprint({ author: bp.author, name: bp.name }))
+}
+```
+
+```jsx
+{
+  fetchBlueprintStatus === 'failed' && (
+    <div className="error-banner" role="alert">
+      <span>Error al cargar el plano</span>
+      {lastOpenedBp && (
+        <button
+          className="btn-retry"
+          onClick={() =>
+            dispatch(fetchBlueprint({ author: lastOpenedBp.author, name: lastOpenedBp.name }))
+          }
+        >
+          Reintentar
+        </button>
+      )}
+    </div>
+  )
+}
+```
+
+Los estilos de `error-banner` y `btn-retry` ya estaban definidos en `styles.css`, con fondo rojo translúcido y diseño `flex` que ubica el mensaje a la izquierda y el botón a la derecha.
+
+---
+
+### Actividad 6: Testing
+
+Se implementaron pruebas con **Vitest** y **Testing Library** cubriendo los dos aspectos requeridos: reducers puros y componentes con interacción.
+
+#### Pruebas del slice (`blueprintsSlice.test.jsx`)
+
+Se cubre exhaustivamente el reducer puro para cada thunk, incluyendo los tres ciclos de vida (`pending`, `fulfilled`, `rejected`) y los _optimistic updates_ de delete y update. También se prueba el memo selector `selectTop5`.
+
+| Suite                  | Pruebas                                                                                                                    |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Initial state          | `authors`, `byAuthor`, `current`, todos los status, `error`                                                                |
+| `fetchAuthors`         | pending → loading, fulfilled → autores guardados, rejected → error                                                         |
+| `fetchByAuthor`        | pending → loading, fulfilled → `byAuthor[author]`, rejected → error                                                        |
+| `fetchBlueprint`       | pending → loading, fulfilled → `current`, rejected → error                                                                 |
+| `deleteBlueprintThunk` | pending → elimina optimistamente, rejected → revierte lista                                                                |
+| `updateBlueprintThunk` | pending → actualiza puntos optimistamente, fulfilled → reemplaza con respuesta del servidor, rejected → revierte blueprint |
+| `selectTop5`           | lista vacía, ordenamiento descendente, límite de 5, autor desconocido                                                      |
+
+Ejemplo de prueba de _optimistic update_ en delete:
+
+```js
+it('pending → optimistically removes blueprint from list', () => {
+  const state = reducer(
+    withItems,
+    deleteBlueprintThunk.pending('req', { author: 'hemingway', name: 'plano1' }),
+  )
+  expect(state.byAuthor['hemingway'].map((b) => b.name)).toEqual(['plano2'])
+})
+
+it('rejected → reverts list to prevItems', () => {
+  const state = reducer(withItems, {
+    type: deleteBlueprintThunk.rejected.type,
+    payload: { author: 'hemingway', prevItems },
+    error: { message: 'server error' },
+  })
+  expect(state.byAuthor['hemingway']).toEqual(prevItems)
+})
+```
+
+#### Pruebas de componentes
+
+- **`BlueprintCanvas.test.jsx`** — verifica que el componente renderiza un `<canvas>` en el DOM y que se llama a `getContext`:
+
+```jsx
+it('renderiza un canvas y llama getContext', () => {
+  const spy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext')
+  const { container } = render(
+    <BlueprintCanvas
+      points={[
+        { x: 10, y: 10 },
+        { x: 50, y: 60 },
+      ]}
+    />,
+  )
+  expect(container.querySelector('canvas')).toBeInTheDocument()
+  expect(spy).toHaveBeenCalled()
+})
+```
+
+- **`BlueprintForm.test.jsx`** — verifica que al completar el formulario y hacer submit, el callback `onSubmit` recibe los datos correctamente parseados:
+
+```jsx
+it('envía el formulario con puntos parseados', () => {
+  const onSubmit = vi.fn()
+  render(<BlueprintForm onSubmit={onSubmit} />)
+  fireEvent.change(screen.getByLabelText(/Autor/i), { target: { value: 'john' } })
+  fireEvent.change(screen.getByLabelText(/Nombre/i), { target: { value: 'house' } })
+  fireEvent.change(screen.getByLabelText(/Puntos/i), { target: { value: '[{"x":1,"y":2}]' } })
+  fireEvent.submit(screen.getByText(/Guardar/i))
+  expect(onSubmit).toHaveBeenCalledWith({ author: 'john', name: 'house', points: [{ x: 1, y: 2 }] })
+})
+```
+
+- **`BlueprintsPage.test.jsx`** — verifica que al escribir un autor y hacer clic en **Get blueprints**, se despacha el thunk `fetchByAuthor` con el valor correcto. Se usa un store de Redux configurado con estado inicial y un mock de los thunks para no requerir backend:
+
+```jsx
+it('despacha fetchByAuthor al hacer click en Get blueprints', () => {
+  const store = makeStore()
+  const spy = vi.spyOn(store, 'dispatch')
+  render(
+    <Provider store={store}>
+      <BlueprintsPage />
+    </Provider>,
+  )
+  fireEvent.change(screen.getByPlaceholderText(/Author/i), { target: { value: 'JohnConnor' } })
+  fireEvent.click(screen.getByText(/Get blueprints/i))
+  expect(spy).toHaveBeenCalledWith({ type: 'blueprints/fetchByAuthor', payload: 'JohnConnor' })
+})
+```
+
+Para que las pruebas funcionen correctamente con jsdom se configuró en `tests/setup.js` la importación de `@testing-library/jest-dom` y un mock del contexto del canvas (`HTMLCanvasElement.prototype.getContext`).

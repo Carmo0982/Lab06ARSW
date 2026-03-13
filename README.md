@@ -186,11 +186,13 @@ VITE_USE_MOCK=true
 > Este proyecto es un punto de partida para que tus estudiantes evolucionen el cliente clásico de Blueprints a una SPA moderna con prácticas de la industria.
 
 ---
+
 # INFORME DE LABORATORIO
 
 **Integrantes**
-- *Jacobo Diaz Alvarado*
-- *Santiago Carmona Pineda*
+
+- _Jacobo Diaz Alvarado_
+- _Santiago Carmona Pineda_
 
 ---
 
@@ -202,9 +204,9 @@ Se empezará haciendo una breve descripción de la estructura de carpetas dentro
 
 Esta carpeta se encarga de crear componentes que son reutilizados en diferentes partes del frontend.
 
-- **BlueprintCanvas**: este componente funcional es el encargado de dibujar la cuadrícula, la línea de puntos y los puntos de un *blueprint*.
+- **BlueprintCanvas**: este componente funcional es el encargado de dibujar la cuadrícula, la línea de puntos y los puntos de un _blueprint_.
 
-- **BlueprintForm**: es un formulario para crear un *blueprint*.
+- **BlueprintForm**: es un formulario para crear un _blueprint_.
 
 - **BlueprintList**: es un componente que muestra una lista de blueprints como tarjetas.
 
@@ -218,16 +220,17 @@ Aquí se encuentran las páginas de nuestro frontend que usan algunos de los com
 
 ### services
 
-- *apiClient*: aquí se encuentran las implementaciones de *Axios* y *JWT* de nuestro proyecto.
+- _apiClient_: aquí se encuentran las implementaciones de _Axios_ y _JWT_ de nuestro proyecto.
 
 ### store
 
-- *index*: es la configuración central de Redux.
+- _index_: es la configuración central de Redux.
 
 ---
+
 ## Parte I
 
-Se nos pide modificar el componente de *BlueprintCanvas*. Se modifica la dimensión y se le agrega un `id`.
+Se nos pide modificar el componente de _BlueprintCanvas_. Se modifica la dimensión y se le agrega un `id`.
 
 ```javascript
 export default function BlueprintCanvas({ id, points = [], width = 520, height = 360 })...
@@ -235,49 +238,49 @@ export default function BlueprintCanvas({ id, points = [], width = 520, height =
 
 ## Parte II
 
-Se nos pide conectar el frontend en React con el backend en Spring Boot. Para esto nos apoyamos en el laboratorio #5, donde ya se había implementado una *API REST* protegida con autenticación *JWT*.
+Se nos pide conectar el frontend en React con el backend en Spring Boot. Para esto nos apoyamos en el laboratorio #5, donde ya se había implementado una _API REST_ protegida con autenticación _JWT_.
 
-### Creación de *blueprintsService*
+### Creación de _blueprintsService_
 
-Este nuevo servicio permite realizar peticiones HTTP hacia los endpoints REST del backend, utilizando las URLs definidas previamente en el laboratorio #5. Cada función del servicio corresponde a un endpoint específico del *BlueprintsAPIController*.
+Este nuevo servicio permite realizar peticiones HTTP hacia los endpoints REST del backend, utilizando las URLs definidas previamente en el laboratorio #5. Cada función del servicio corresponde a un endpoint específico del _BlueprintsAPIController_.
 
 ```js
 import api from './apiClient'
 
 // GET todos los planos
 export const getBlueprints = async () => {
-    const res = await api.get('/v1/blueprints')
-    return res.data
+  const res = await api.get('/v1/blueprints')
+  return res.data
 }
 
 // GET planos por autor
 export const getBlueprintsByAuthor = async (author) => {
-    const res = await api.get(`/v1/blueprints/${author}`)
-    return res.data.data
+  const res = await api.get(`/v1/blueprints/${author}`)
+  return res.data.data
 }
 
 // GET plano por autor y nombre
 export const getBlueprint = async (author, name) => {
-    const res = await api.get(`/v1/blueprints/${author}/${name}`)
-    return res.data.data
+  const res = await api.get(`/v1/blueprints/${author}/${name}`)
+  return res.data.data
 }
 
 // POST crear nuevo blueprint
 export const createBlueprint = async (blueprint) => {
-    const res = await api.post('/v1/blueprints', blueprint)
-    return res.data.data
+  const res = await api.post('/v1/blueprints', blueprint)
+  return res.data.data
 }
 
 // PUT agregar un punto
 export const addPoint = async (author, name, point) => {
-    const res = await api.put(`/v1/blueprints/${author}/${name}/points`, point)
-    return res.data.data
+  const res = await api.put(`/v1/blueprints/${author}/${name}/points`, point)
+  return res.data.data
 }
 ```
 
-Un detalle a aclarar es el uso de `data.data`. Se debe a que nuestra *API REST* retorna un *ApiResponse*.
+Un detalle a aclarar es el uso de `data.data`. Se debe a que nuestra _API REST_ retorna un _ApiResponse_.
 
-En nuestra *API REST* habíamos definido las URLs de esta forma `/v1/blueprint/...` así que tuvimos que modificar las URLs que había en `blueprintsSlice`.
+En nuestra _API REST_ habíamos definido las URLs de esta forma `/v1/blueprint/...` así que tuvimos que modificar las URLs que había en `blueprintsSlice`.
 
 ```js
 export const fetchAuthors = createAsyncThunk('blueprints/fetchAuthors', async () => {
@@ -313,7 +316,7 @@ export const createBlueprint = createAsyncThunk('blueprints/createBlueprint', as
 })
 ```
 
-### Correcciones en *LoginPage*
+### Correcciones en _LoginPage_
 
 También fue necesario corregir dos errores en `LoginPage.jsx`. El primero fue la URL del login, que apuntaba a `/api/auth/login` cuando el endpoint real del backend es `/auth/login`. El segundo fue que el token se guardaba como `data.token`, pero el backend retorna `data.access_token`.
 
@@ -363,6 +366,7 @@ public class SecurityConfig {
 ```
 
 ---
+
 ## Parte III
 
 En esta parte se probó que funcionara el frontend en nuestra máquina.
@@ -377,71 +381,96 @@ En esta parte se probó que funcionara el frontend en nuestra máquina.
 ![alt text](<img/Captura de pantalla 2026-03-10 003032.png>)
 
 ---
+
 ## Parte IV
 
 En esta parte se nos pide "quemar" el frontend con mocks. Dentro de la carpeta `services` creamos una carpeta llamada `mocks`. A continuación se explicará los nuevos archivos creados en esta carpeta.
 
-- `apiclient.js`: este service perimíte llamar a la *API REST* a través de verbos *http* junto a su recpectiva *URL*.
+- `apiclient.js`: este service perimíte llamar a la _API REST_ a través de verbos _http_ junto a su recpectiva _URL_.
 
 ```js
 import api from '../apiClient.js'
 
 export const getAll = async () => {
-    const { data } = await api.get('/v1/blueprints')
-    return data.data
+  const { data } = await api.get('/v1/blueprints')
+  return data.data
 }
 
 export const getByAuthor = async (author) => {
-    const { data } = await api.get(`/v1/blueprints/${encodeURIComponent(author)}`)
-    return data.data
+  const { data } = await api.get(`/v1/blueprints/${encodeURIComponent(author)}`)
+  return data.data
 }
 
 export const getByAuthorAndName = async (author, name) => {
-    const { data } = await api.get(`/v1/blueprints/${encodeURIComponent(author)}/${encodeURIComponent(name)}`)
-    return data.data
+  const { data } = await api.get(
+    `/v1/blueprints/${encodeURIComponent(author)}/${encodeURIComponent(name)}`,
+  )
+  return data.data
 }
 
 export const create = async (blueprint) => {
-    const { data } = await api.post('/v1/blueprints', blueprint)
-    return data.data
+  const { data } = await api.post('/v1/blueprints', blueprint)
+  return data.data
 }
 ```
 
-- `apimocks`: aquí se quemaron los datos de un *author* y se implementaron los métodos *getAll*, *getByAuthor*, *getByAuthorAndName* y *create*. 
+- `apimocks`: aquí se quemaron los datos de un _author_ y se implementaron los métodos _getAll_, _getByAuthor_, _getByAuthorAndName_ y _create_.
 
 ```js
 const mockData = [
-    { author: 'hemingway', name: 'El viejo y el mar', points: [{x: 10, y: 10}, {x: 100, y: 150}, {x: 200, y: 80}] }, 
-    { author: 'hemingway', name: 'Adiós a las armas', points: [{x:50, y: 50}, {x: 300, y: 200}] },
-    { author: 'kafka', name: 'La metamorfosis', points: [{x: 20, y: 30}, {x: 150, y: 100}, {x:400, y: 250}] },
+  {
+    author: 'hemingway',
+    name: 'El viejo y el mar',
+    points: [
+      { x: 10, y: 10 },
+      { x: 100, y: 150 },
+      { x: 200, y: 80 },
+    ],
+  },
+  {
+    author: 'hemingway',
+    name: 'Adiós a las armas',
+    points: [
+      { x: 50, y: 50 },
+      { x: 300, y: 200 },
+    ],
+  },
+  {
+    author: 'kafka',
+    name: 'La metamorfosis',
+    points: [
+      { x: 20, y: 30 },
+      { x: 150, y: 100 },
+      { x: 400, y: 250 },
+    ],
+  },
 ]
 
 export const getAll = async () => mockData
 
 export const getByAuthor = async (author) => {
-    const result = mockData.filter(item => item.author === author)
-    if (!result.length) {
-        throw new Error(`No se encontraron obras para el autor ${author}`)
-    }
-    return result
+  const result = mockData.filter((item) => item.author === author)
+  if (!result.length) {
+    throw new Error(`No se encontraron obras para el autor ${author}`)
+  }
+  return result
 }
 
 export const getByAuthorAndName = async (author, name) => {
-    const result = mockData.find(item => item.author === author && item.name === name)
-    if (!result) {
-        throw new Error(`No se encontró la obra ${name} del autor ${author}`)
-    } 
-    return result
-}  
-
-export const create = async (blueprint) => {
-    mockData.push(blueprint)
-    return blueprint
+  const result = mockData.find((item) => item.author === author && item.name === name)
+  if (!result) {
+    throw new Error(`No se encontró la obra ${name} del autor ${author}`)
+  }
+  return result
 }
 
+export const create = async (blueprint) => {
+  mockData.push(blueprint)
+  return blueprint
+}
 ```
 
-- `blueprintService`: este servicio se encarga de de decidir si usar el `mock` o utilizar la *API REST* deependiendo del valor de verdad del `.env`.
+- `blueprintService`: este servicio se encarga de de decidir si usar el `mock` o utilizar la _API REST_ deependiendo del valor de verdad del `.env`.
 
 ```js
 import * as mock from './apimock.js'
@@ -454,6 +483,7 @@ export const getByAuthor = service.getByAuthor
 export const getByAuthorAndName = service.getByAuthorAndName
 export const create = service.create
 ```
+
 - `.env`: aquí es donde decidimos qué valor de verdad ponerle al uso de mocks
 
 ```
@@ -464,11 +494,16 @@ Después de la creación de estos archivos se modificó `blueprintsSlice.js`, re
 
 ```js
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
-import { getAll, getByAuthor, getByAuthorAndName, create } from '../../services/mocks/blueprintsService.js'
+import {
+  getAll,
+  getByAuthor,
+  getByAuthorAndName,
+  create,
+} from '../../services/mocks/blueprintsService.js'
 
 export const fetchAuthors = createAsyncThunk('blueprints/fetchAuthors', async () => {
   const blueprints = await getAll()
-  return [...new Set(blueprints.map(bp => bp.author))]
+  return [...new Set(blueprints.map((bp) => bp.author))]
 })
 
 export const fetchByAuthor = createAsyncThunk('blueprints/fetchByAuthor', async (author) => {
@@ -476,15 +511,67 @@ export const fetchByAuthor = createAsyncThunk('blueprints/fetchByAuthor', async 
   return { author, items }
 })
 
-export const fetchBlueprint = createAsyncThunk('blueprints/fetchBlueprint', async ({ author, name }) => {
-  return await getByAuthorAndName(author, name)
-})
+export const fetchBlueprint = createAsyncThunk(
+  'blueprints/fetchBlueprint',
+  async ({ author, name }) => {
+    return await getByAuthorAndName(author, name)
+  },
+)
 
 export const createBlueprint = createAsyncThunk('blueprints/createBlueprint', async (payload) => {
   return await create(payload)
 })
 ```
 
+---
+
+## Parte V
+
+En esta parte se requiere que el nombre del plano actual se muestre en el DOM como parte del **estado global de Redux**, evitando manipulación directa del DOM.
+
+### Cambios en `BlueprintsPage.jsx`
+
+Se reemplazó el `<h3>` que mostraba el nombre del plano directamente en el encabezado de la sección por un campo de texto de solo lectura (`<input type="text" readOnly>`). Este campo obtiene su valor desde el selector de Redux `current?.name`, lo que garantiza que el nombre del plano es un reflejo directo del estado global y no una manipulación directa del DOM.
+
+```jsx
+{
+  /* current (Redux state) → campo de texto de solo lectura */
+}
+;<div className="field-group">
+  <label className="field-label" htmlFor="current-bp-name">
+    Blueprint name
+  </label>
+  <input
+    id="current-bp-name"
+    type="text"
+    className="input current-blueprint-input"
+    readOnly
+    value={current?.name ?? ''}
+    placeholder="No blueprint selected"
+  />
+</div>
+```
+
+Cuando el usuario hace clic en `Open` de cualquier fila de la tabla, se despacha el thunk `fetchBlueprint`, que actualiza `current` en el slice. El componente lee `current.name` vía `useSelector`, y React re-renderiza el input automáticamente sin tocar el DOM directamente.
+
+---
+
+## Parte VI
+
+En esta parte se mejora la presentación visual de la aplicación mediante estilos CSS.
+
+### Cambios en `styles.css`
+
+Se refactorizó completamente el archivo de estilos:
+
+- **Variables CSS**: se centralizaron los colores, radios y espaciados en `:root` para facilitar el mantenimiento.
+- **Tabla (`bp-table`)**: se añadieron estilos de cabecera con fondo diferenciado, bordes entre filas, efecto hover por fila y alineación tipográfica para mejorar la legibilidad.
+- **Botones**: se añadieron transiciones suaves (`hover`, `active`) y una variante compacta (`.btn-sm`) para el botón `Open` dentro de la tabla.
+- **Barra de búsqueda (`.search-bar`)**: `display: flex` con espaciado para alinear el input y el botón horizontalmente.
+- **Badge**: componente pill para mostrar el número de puntos de cada plano, con color accent y borde sutil.
+- **Campo de nombre actual (`.current-blueprint-input`)**: estilo distintivo con color accent (`#93c5fd`) para resaltar visualmente el plano seleccionado.
+- **Header y nav**: bordes inferiores, transiciones en links y estado `active` más claro.
+- **Tarjetas (`.card`)**: sombra más pronunciada y padding ajustado.
 --- 
 ## Recomendaciones y actividades sugeridas
 

@@ -572,3 +572,208 @@ Se refactorizó completamente el archivo de estilos:
 - **Campo de nombre actual (`.current-blueprint-input`)**: estilo distintivo con color accent (`#93c5fd`) para resaltar visualmente el plano seleccionado.
 - **Header y nav**: bordes inferiores, transiciones en links y estado `active` más claro.
 - **Tarjetas (`.card`)**: sombra más pronunciada y padding ajustado.
+--- 
+## Recomendaciones y actividades sugeridas
+
+### Actividad 1: Redux avanzado
+
+- **Estados loading/error por thunk**
+
+Se agregaron estados de carga y error individuales por cada thunk en `blueprintsSlice.js`, reemplazando el estado global `status` por uno específico para cada operación.
+```javascript
+initialState: {
+    authors: [],
+    byAuthor: {},
+    current: null,
+    fetchAuthorsStatus: 'idle',
+    fetchByAuthorStatus: 'idle',
+    fetchBlueprintStatus: 'idle',
+    createBlueprintStatus: 'idle',
+    error: null,
+},
+```
+
+Cada thunk ahora maneja sus propios estados `pending`, `fulfilled` y `rejected`:
+```javascript
+.addCase(fetchByAuthor.pending, (s) => { s.fetchByAuthorStatus = 'loading' })
+.addCase(fetchByAuthor.fulfilled, (s, a) => {
+    s.fetchByAuthorStatus = 'succeeded'
+    s.byAuthor[a.payload.author] = a.payload.items
+})
+.addCase(fetchByAuthor.rejected, (s, a) => {
+    s.fetchByAuthorStatus = 'failed'
+    s.error = a.error.message
+})
+```
+
+Estos estados se muestran en la UI de `BlueprintsPage.jsx`:
+```jsx
+{fetchByAuthorStatus === 'loading' && <p>Cargando blueprints...</p>}
+{fetchByAuthorStatus === 'failed' && <p style={{ color: '#f87171' }}>Error: {error}</p>}
+```
+
+- **Memo selectors para top-5**
+
+Se instaló `reselect` y se implementó un memo selector que deriva el top 5 de blueprints por cantidad de puntos de un autor, sin recalcular si los datos no cambiaron.
+```javascript
+import { createSelector } from 'reselect'
+
+const selectByAuthor = (state) => state.blueprints.byAuthor
+const selectSelectedAuthor = (_, author) => author
+
+export const selectTop5 = createSelector(
+  [selectByAuthor, selectSelectedAuthor],
+  (byAuthor, author) => {
+    const items = byAuthor[author] || []
+    return [...items]
+      .sort((a, b) => (b.points?.length || 0) - (a.points?.length || 0))
+      .slice(0, 5)
+  }
+)
+```
+
+En `BlueprintsPage.jsx` se usa el selector y se muestra el resultado debajo de la tabla:
+```jsx
+const top5 = useSelector((state) => selectTop5(state, selectedAuthor))
+
+{top5.length > 0 && (
+    <div style={{ marginTop: 16 }}>
+        <h4 style={{ marginBottom: 8 }}>Top 5 blueprints por puntos:</h4>
+        {top5.map((bp, i) => (
+            <p key={bp.name} style={{ margin: '4px 0' }}>
+                {i + 1}. {bp.name} — {bp.points?.length || 0} puntos
+            </p>
+        ))}
+    </div>
+)}
+```
+--
+### Actividad 2: Rutas protegidas
+
+Se creó el componente `PrivateRoute.jsx` en `src/components/`. Este componente verifica si existe un token JWT en el `localStorage`. Si existe, muestra el contenido protegido; si no, redirige automáticamente al login.
+```jsx
+import { Navigate } from 'react-router-dom'
+
+export default function PrivateRoute({ children }) {
+  const token = localStorage.getItem('token')
+  return token ? children : <Navigate to="/login" replace />
+}
+```
+
+Posteriormente se modificó `App.jsx` para proteger las rutas que requieren autenticación, envolviendo los componentes con `<PrivateRoute>`.
+```jsx
+import PrivateRoute from './components/PrivateRoute.jsx'
+
+<Routes>
+  <Route path="/" element={
+    <PrivateRoute>
+      <BlueprintsPage />
+    </PrivateRoute>
+  } />
+  <Route path="/blueprints/:author/:name" element={
+    <PrivateRoute>
+      <BlueprintDetailPage />
+    </PrivateRoute>
+  } />
+  <Route path="/login" element={<LoginPage />} />
+  <Route path="*" element={<NotFound />} />
+</Routes>
+```
+
+De esta forma, si un usuario intenta acceder a `/` o `/blueprints/:author/:name` sin estar autenticado, es redirigido automáticamente a `/login`.
+
+--- 
+### Actividad 3: CRUD completo
+
+- **Backend**
+
+Se agregaron dos nuevos endpoints en `BlueprintsAPIController.java`:
+
+**DELETE** — elimina un blueprint por autor y nombre:
+```java
+@DeleteMapping("/{author}/{bpname}")
+public ResponseEntity<ApiResponse<Void>> delete(
+        @PathVariable String author,
+        @PathVariable String bpname) {
+    try {
+        services.deleteBlueprint(author, bpname);
+        return ResponseEntity.ok(new ApiResponse<>(200, "DELETE", null));
+    } catch (BlueprintNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiResponse<>(404, "Not found", null));
+    }
+}
+```
+
+**PUT** — reemplaza completamente la lista de puntos de un blueprint:
+```java
+@PutMapping("/{author}/{bpname}")
+public ResponseEntity<ApiResponse<Blueprint>> update(
+        @PathVariable String author,
+        @PathVariable String bpname,
+        @RequestBody List<Point> newPoints) {
+    try {
+        Blueprint bp = services.updateBlueprint(author, bpname, newPoints);
+        return ResponseEntity.ok(new ApiResponse<>(200, "UPDATED", bp));
+    } catch (BlueprintNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiResponse<>(404, "Not Found", null));
+    }
+}
+```
+
+- **Frontend**
+
+Se agregaron `deleteBlueprint` y `updateBlueprint` en `mocks/apiClient.js` y `mocks/apimock.js`, y se exportaron en `mocks/blueprintsService.js`.
+
+En `blueprintsSlice.js` se implementaron dos nuevos thunks con **optimistic updates**: la UI se actualiza inmediatamente antes de que el backend confirme, y si la operación falla, se revierte al estado anterior.
+```javascript
+export const deleteBlueprintThunk = createAsyncThunk(
+  'blueprints/deleteBlueprint',
+  async ({ author, name }, { getState, rejectWithValue }) => {
+    const prevItems = getState().blueprints.byAuthor[author] || []
+    try {
+      await deleteBlueprint(author, name)
+      return { author, name }
+    } catch (e) {
+      return rejectWithValue({ author, prevItems })
+    }
+  }
+)
+
+export const updateBlueprintThunk = createAsyncThunk(
+  'blueprints/updateBlueprint',
+  async ({ author, name, points }, { getState, rejectWithValue }) => {
+    const prevBlueprint = getState().blueprints.byAuthor[author]?.find(bp => bp.name === name)
+    try {
+      const updated = await updateBlueprint(author, name, points)
+      return { author, name, updated }
+    } catch (e) {
+      return rejectWithValue({ author, name, prevBlueprint })
+    }
+  }
+)
+```
+
+En `BlueprintsPage.jsx` se agregaron los botones **Edit** y **Delete** en cada fila de la tabla. Al hacer clic en **Edit** aparece un textarea debajo del canvas para modificar los puntos en formato JSON. Al hacer clic en **Delete** se pide confirmación antes de eliminar.
+
+### Actividad 4: Dibujo interactivo
+
+Se creó el componente `InteractiveCanvas.jsx` en `src/components/`. Este componente extiende el comportamiento de `BlueprintCanvas` permitiendo al usuario hacer clic sobre el canvas para agregar puntos interactivamente.
+```jsx
+const handleClick = (e) => {
+    const canvas = ref.current
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const x = Math.round((e.clientX - rect.left) * scaleX)
+    const y = Math.round((e.clientY - rect.top) * scaleY)
+    setPoints(prev => [...prev, { x, y }])
+}
+```
+
+El cálculo de `scaleX` y `scaleY` es necesario porque el canvas puede tener un tamaño visual diferente al tamaño interno de coordenadas (`520x360`), por lo que se ajustan las coordenadas del click al sistema de coordenadas real del canvas.
+
+El componente recibe `initialPoints` para mostrar los puntos existentes del blueprint al abrir el editor, y `onSave` como función que se llama al presionar **Guardar** con la lista de puntos actualizada. También incluye un botón **Limpiar** para borrar todos los puntos del canvas.
+
+En `BlueprintsPage.jsx` se reemplazó el textarea de edición JSON por el nuevo `InteractiveCanvas`, de forma que al hacer clic en **Edit** el usuario puede dibujar los puntos directamente sobre el canvas en lugar de escribirlos manualmente.

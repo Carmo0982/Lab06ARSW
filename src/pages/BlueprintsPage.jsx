@@ -4,15 +4,22 @@ import {
   fetchAuthors,
   fetchByAuthor,
   fetchBlueprint,
+  selectTop5,
+  deleteBlueprintThunk,
+  updateBlueprintThunk,
 } from '../features/blueprints/blueprintsSlice.js'
 import BlueprintCanvas from '../components/BlueprintCanvas.jsx'
+import InteractiveCanvas from '../components/InteractiveCanvas.jsx'
 
 export default function BlueprintsPage() {
   const dispatch = useDispatch()
-  const { byAuthor, current, status } = useSelector((s) => s.blueprints)
+  const { byAuthor, current, fetchByAuthorStatus, fetchBlueprintStatus, error } = useSelector((s) => s.blueprints)
   const [authorInput, setAuthorInput] = useState('')
   const [selectedAuthor, setSelectedAuthor] = useState('')
+  const [editingBp, setEditingBp] = useState(null)
+  const [editPointsJSON, setEditPointsJSON] = useState('')
   const items = byAuthor[selectedAuthor] || []
+  const top5 = useSelector((state) => selectTop5(state, selectedAuthor))
 
   useEffect(() => {
     dispatch(fetchAuthors())
@@ -31,6 +38,27 @@ export default function BlueprintsPage() {
 
   const openBlueprint = (bp) => {
     dispatch(fetchBlueprint({ author: bp.author, name: bp.name }))
+  }
+
+  const handleDelete = (bp) => {
+    if (!confirm(`¿Eliminar "${bp.name}"?`)) return
+    dispatch(deleteBlueprintThunk({ author: bp.author, name: bp.name }))
+  }
+
+  const handleEditStart = (bp) => {
+    setEditingBp(bp)
+    setEditPointsJSON(JSON.stringify(bp.points || []))
+  }
+
+  const handleEditSave = () => {
+    try {
+      const points = JSON.parse(editPointsJSON)
+      dispatch(updateBlueprintThunk({ author: editingBp.author, name: editingBp.name, points }))
+      dispatch(fetchBlueprint({ author: editingBp.author, name: editingBp.name })) // ← actualiza el canvas
+      setEditingBp(null)
+    } catch (e) {
+      alert('JSON de puntos inválido')
+    }
   }
 
   return (
@@ -61,6 +89,11 @@ export default function BlueprintsPage() {
           {!items.length && status !== 'loading' && (
             <p className="status-msg muted">No results found.</p>
           )}
+
+          {fetchByAuthorStatus === 'loading' && <p>Cargando blueprints...</p>}
+          {fetchByAuthorStatus === 'failed' && <p style={{ color: '#f87171' }}>Error: {error}</p>}
+
+          {!items.length && fetchByAuthorStatus !== 'loading' && <p>Sin resultados.</p>}
           {!!items.length && (
             <div className="table-wrapper">
               <table className="bp-table">
@@ -69,6 +102,13 @@ export default function BlueprintsPage() {
                     <th>Blueprint name</th>
                     <th className="text-right">Points</th>
                     <th></th>
+                    <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #334155' }}>
+                      Blueprint name
+                    </th>
+                    <th style={{ textAlign: 'right', padding: '8px', borderBottom: '1px solid #334155' }}>
+                      Number of points
+                    </th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #334155' }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -80,7 +120,21 @@ export default function BlueprintsPage() {
                       </td>
                       <td className="text-right">
                         <button className="btn btn-sm primary" onClick={() => openBlueprint(bp)}>
+                      <td style={{ padding: '8px', borderBottom: '1px solid #1f2937' }}>
+                        {bp.name}
+                      </td>
+                      <td style={{ padding: '8px', textAlign: 'right', borderBottom: '1px solid #1f2937' }}>
+                        {bp.points?.length || 0}
+                      </td>
+                      <td style={{ padding: '8px', borderBottom: '1px solid #1f2937', display: 'flex', gap: 8 }}>
+                        <button className="btn" onClick={() => openBlueprint(bp)}>
                           Open
+                        </button>
+                        <button className="btn" onClick={() => handleEditStart(bp)}>
+                          Edit
+                        </button>
+                        <button className="btn" style={{ color: '#f87171' }} onClick={() => handleDelete(bp)}>
+                          Delete
                         </button>
                       </td>
                     </tr>
@@ -92,6 +146,18 @@ export default function BlueprintsPage() {
           <p className="total-points">
             Total user points: <strong>{totalPoints}</strong>
           </p>
+          <p style={{ marginTop: 12, fontWeight: 700 }}>Total user points: {totalPoints}</p>
+
+          {top5.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <h4 style={{ marginBottom: 8 }}>Top 5 blueprints por puntos:</h4>
+              {top5.map((bp, i) => (
+                <p key={bp.name} style={{ margin: '4px 0' }}>
+                  {i + 1}. {bp.name} — {bp.points?.length || 0} puntos
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -114,6 +180,28 @@ export default function BlueprintsPage() {
         <div style={{ marginTop: 12 }}>
           <BlueprintCanvas id="blueprintCanvas" points={current?.points || []} />
         </div>
+        <h3 style={{ marginTop: 0 }}>Current blueprint: {current?.name || '—'}</h3>
+        {fetchBlueprintStatus === 'loading' && <p>Cargando plano...</p>}
+        {fetchBlueprintStatus === 'failed' && <p style={{ color: '#f87171' }}>Error al cargar el plano</p>}
+        <BlueprintCanvas points={current?.points || []} />
+
+        {editingBp && (
+          <div style={{ marginTop: 16 }}>
+            <h4 style={{ marginBottom: 8 }}>Editando: {editingBp.name}</h4>
+            <p style={{ fontSize: 12, color: '#94a3b8' }}>Haz clic en el canvas para agregar puntos</p>
+            <InteractiveCanvas
+              initialPoints={editingBp.points || []}
+              onSave={(points) => {
+                dispatch(updateBlueprintThunk({ author: editingBp.author, name: editingBp.name, points }))
+                dispatch(fetchBlueprint({ author: editingBp.author, name: editingBp.name }))
+                setEditingBp(null)
+              }}
+            />
+            <button className="btn" style={{ marginTop: 8 }} onClick={() => setEditingBp(null)}>
+              Cancelar
+            </button>
+          </div>
+        )}
       </section>
     </div>
   )

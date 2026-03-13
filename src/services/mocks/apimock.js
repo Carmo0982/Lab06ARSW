@@ -26,3 +26,16 @@ export const create = async (blueprint) => {
     mockData.push(blueprint)
     return blueprint
 }
+
+export const deleteBlueprint = async (author, name) => {    
+    const index = mockData.findIndex(item => item.author === author && item.name === name)
+    if (index === -1) throw new Error(`No se encontró la obra ${name} del autor ${author}`)
+    mockData.splice(index, 1)
+}
+
+export const updateBlueprint = async (author, name, points) => {
+    const bp = mockData.find(item => item.author === author && item.name === name)
+    if (!bp) throw new Error(`No se encontró la obra ${name} del autor ${author}`)
+    bp.points = points
+    return bp
+}
